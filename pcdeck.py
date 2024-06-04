@@ -19,7 +19,7 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 
-class Deej(object):
+class PcDeck(object):
 
     def __init__(self,):
         self._config_filename = 'config.yaml'
@@ -290,7 +290,7 @@ def setup_tray(edit_config_callback, refresh_sessions_callback, stop_callback):
     menu_options = (('Edit configuration', None, lambda _: edit_config_callback()),
                     ('Re-scan audio sessions', None, lambda _: refresh_sessions_callback()))
 
-    tray = infi.systray.SysTrayIcon('assets/logo.ico', 'deej', menu_options, on_quit=lambda _: stop_callback())
+    tray = infi.systray.SysTrayIcon('assets/logo.ico', 'PcDeck', menu_options, on_quit=lambda _: stop_callback())
     tray.start()
 
     return tray
@@ -312,25 +312,23 @@ def spawn_detached_notepad(filename):
 
 
 def main():
-    deej = Deej()
+    pcdeck = PcDeck()
 
     try:
-        deej.initialize()
-        tray = setup_tray(deej.edit_config, deej.queue_session_refresh, deej.stop)
+        pcdeck.initialize()
+        tray = setup_tray(pcdeck.edit_config, pcdeck.queue_session_refresh, pcdeck.stop)
 
-        deej.start()
+        pcdeck.start()
 
     except KeyboardInterrupt:
         attempt_print('Interrupted.')
         sys.exit(130)
     except Exception as error:
-        filename = 'deej-{0}.log'.format(datetime.datetime.now().strftime('%Y.%m.%d-%H.%M.%S'))
+        filename = 'pcdeck-{0}.log'.format(datetime.datetime.now().strftime('%Y.%m.%d-%H.%M.%S'))
 
         with open(filename, 'w') as f:
             import traceback
-            f.write('Unfortunately, deej has crashed. This really shouldn\'t happen!\n')
-            f.write('If you\'ve just encountered this, please contact @omriharel and attach this error log.\n')
-            f.write('You can also join the deej Discord server at https://discord.gg/nf88NJu.\n')
+            f.write('Unfortunately, PcDeck has crashed. This really shouldn\'t happen!\n')
             f.write('Exception occurred: {0}\nTraceback: {1}'.format(error, traceback.format_exc()))
 
         spawn_detached_notepad(filename)
