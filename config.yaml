@@ -3,9 +3,9 @@
 slider_mapping:
   0: master
   1: steam.exe
-  2: steam.exe
-  3: steam.exe
-  4: steam.exe
+  2: 
+    - steam.exe
+    - steam.exe
 
 # recommend to leave this setting at its default value
 process_refresh_frequency: 5

@@ -115,6 +115,7 @@ class Deej(object):
             with open(self._config_filename, 'r') as f: # P3
                 yaml = YAML()
                 settings = yaml.load(f)
+
         except Exception as error:
             attempt_print('Failed to {0}load config file {1}: {2}'.format('re' if reload else '',
                                                                           self._config_filename,
@@ -127,15 +128,15 @@ class Deej(object):
 
         try:
             
-                    # Ensure all targets in 'slider_mapping' are strings
+            # Ensure all targets in 'slider_mapping' are strings
             for slider, targets in settings['slider_mapping'].items():
                 if isinstance(targets, list):
                     settings['slider_mapping'][slider] = [str(target) for target in targets]
                 else:
                     settings['slider_mapping'][slider] = str(targets)
+            print(settings)
             
             self._expected_num_sliders = len(settings['slider_mapping'])
-            print(self._expected_num_sliders)
             self._com_port = settings['com_port']
             self._baud_rate = settings['baud_rate']
 

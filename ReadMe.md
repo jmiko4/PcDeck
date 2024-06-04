@@ -1,5 +1,75 @@
 # PcDeck
-### Justin Mikolajcik, Elizabeth Hunter, Vladislovas Karalius
+### Justin Mikolajcik, Elizabeth Hunter, Vladislovas Karalius, Matheus Pires
+
+## Setup and Usage
+
+### Software
+
+- The code running on the Arduino board is a C program constantly writing current slider values over its Serial interface [`pc-deck-arduino.ino`](./pc-deck-arduino/pc-deck-arduino.ino)
+- The PC runs a Python script [`pc-deck.py`](./pc-deck.py) that listens to the board's Serial connection, detects changes in slider values and sets volume of equivalent audio sessions accordingly.
+- A VBScript-based run helper [`run.vbs`](./run.vbs) allows this Python script to run in the background (from the Windows tray).
+
+### Slider Mapping (Configuration)
+
+`PcDeck` uses an external YAML-formatted configuration file named [`config.yaml`](./config.yaml).
+
+The config file determines which applications are mapped to which sliders, and which COM port/baud rate to use for the connection to the Arduino board.
+
+**This file auto-reloads when its contents are changed, so you can change application mappings on-the-fly without restarting `PcDeck`.**
+
+It looks like this:
+
+```yaml
+slider_mapping:
+  0: master
+  1: chrome.exe
+  2: spotify.exe
+  3:
+    - pathofexile_x64.exe
+    - rocketleague.exe
+  4: discord.exe
+
+# recommend to leave this setting at its default value
+process_refresh_frequency: 5
+
+# settings for connecting to the arduino board
+com_port: COM4
+baud_rate: 9600
+```
+
+- Process names aren't case-sensitive
+- You can use a list of process names to either:
+    - define a group that is controlled simultaneously
+    - choose whichever process in the group is currently running (in this example, one slider is for different games that may be running)
+- `master` is a special option for controlling master volume of the system.
+- The `process_refresh_frequency` option limits how often `PcDeck` may look for new processes if their appropriate slider moves. This allows you to leave `PcDeck` running in background and open/close processes normally - the sliders will #justwork
+
+## How to run
+
+### Requirements
+
+- Python 3.x.x and `pip`
+- `virtualenv`
+
+### Installation
+
+- Download the repository by either cloning it or downloading its archive.
+- In the repo's directory, run:
+    - `virtualenv venv`
+    - `venv\Scripts\activate.bat`
+    - `pip install -r requirements.txt`
+- Make a shortcut to `run.vbs` by right-clicking it -> "Create Shortcut"
+- (Optional, but mandatory) Change the shortcut's icon to `assets/logo.ico`
+- (Optional, but optional) Copy the shortcut to `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup` to have `deej` run on boot
+
+## Missing stuff
+
+- Better logging and error handling
+- Automatic COM port detection
+- Mic input support
+
+
+
 ## Project Scope
 
 The goal of this project is to build a streamdeck type device that allows you to quickly change app specific volumes (discord, game volume, spotify), use custom macro keys to do frequent tasks (mute microphone, open discord, toggle night mode), automatically or manually change brightness, and add a display to easily monitor PC metrics (CPU temperature, CPU usage, GPU usage, Time, Etc). All of these features would be incredibly useful for those who play games or PC enthusiasts.
