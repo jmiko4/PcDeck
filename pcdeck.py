@@ -80,7 +80,7 @@ class PcDeck(object):
                 self._refresh_sessions()
 
             # read a single line from the serial stream, has values between 0 and 1023 separated by "|"
-            line = ser.readline().decode('utf-8').strip() # P3
+            line = ser.readline().decode('utf-8').strip()
 
             # empty lines are a thing i guess
             if not line:
@@ -112,9 +112,10 @@ class PcDeck(object):
         settings = None
 
         try:
-            with open(self._config_filename, 'r') as f: # P3
+            with open(self._config_filename, 'r') as f:
                 yaml = YAML()
                 settings = yaml.load(f)
+                print(settings) # Debug
 
         except Exception as error:
             attempt_print('Failed to {0}load config file {1}: {2}'.format('re' if reload else '',
@@ -134,7 +135,6 @@ class PcDeck(object):
                     settings['slider_mapping'][slider] = [str(target) for target in targets]
                 else:
                     settings['slider_mapping'][slider] = str(targets)
-            print(settings)
             
             self._expected_num_sliders = len(settings['slider_mapping'])
             self._com_port = settings['com_port']
@@ -236,7 +236,7 @@ class PcDeck(object):
 
                     # each target may resolve to multiple sessions. for each such session:
                     for session_name, session in sessions:
-
+                        print(session_name) # Debug
                         # get its current volume
                         current_volume = self._get_session_volume(session)
 

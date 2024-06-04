@@ -3,9 +3,14 @@
 slider_mapping:
   0: master
   1: steam.exe
-  2: 
-    - steam.exe
-    - steam.exe
+  2: chrome.exe
+
+# To control several processes with one slider use this format
+#   2: 
+#     - process1.exe
+#     - process2.exe
+#     - process3.exe
+
 
 # recommend to leave this setting at its default value
 process_refresh_frequency: 5

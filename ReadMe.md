@@ -23,11 +23,9 @@ It looks like this:
 slider_mapping:
   0: master
   1: chrome.exe
-  2: spotify.exe
-  3:
+  2:
     - pathofexile_x64.exe
     - rocketleague.exe
-  4: discord.exe
 
 # recommend to leave this setting at its default value
 process_refresh_frequency: 5
@@ -66,8 +64,6 @@ baud_rate: 9600
 
 - Better logging and error handling
 - Automatic COM port detection
-- Mic input support
-
 
 
 ## Project Scope
