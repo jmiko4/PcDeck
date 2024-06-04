@@ -57,8 +57,8 @@ baud_rate: 9600
     - `venv\Scripts\activate.bat`
     - `pip install -r requirements.txt`
 - Make a shortcut to `run.vbs` by right-clicking it -> "Create Shortcut"
-- (Optional, but mandatory) Change the shortcut's icon to `assets/logo.ico`
-- (Optional, but optional) Copy the shortcut to `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup` to have `deej` run on boot
+- Change the shortcut's icon to `assets/logo.ico`
+- (Optional) Copy the shortcut to `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup` to have `PcDeck` run on boot
 
 ## Missing stuff
 
