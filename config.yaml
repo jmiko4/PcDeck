@@ -20,3 +20,4 @@ com_port: COM4 # Used by Arduino Uno
 # com_port: COM11 # Used by Arduino Mega
 
 baud_rate: 9600
+
