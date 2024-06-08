@@ -41,7 +41,11 @@ type SliderMoveEvent struct {
 	PercentValue float32
 }
 
-var expectedLinePattern = regexp.MustCompile(`^\d{1,4}(\|\d{1,4})*\r\n$`)
+// Stores additional information received from Arduino
+var lineParts []string
+
+// It accepts the slider data and additional data after $
+var expectedLinePattern = regexp.MustCompile(`^\d{1,4}(\|\d{1,4})*(\$.*)*\r\n$`)
 
 // NewSerialIO creates a SerialIO instance that uses the provided deej
 // instance's connection info to establish communications with the arduino chip
@@ -231,6 +235,7 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 	// this function receives an unsanitized line which is guaranteed to end with LF,
 	// but most lines will end with CRLF. it may also have garbage instead of
 	// deej-formatted values, so we must check for that! just ignore bad ones
+
 	if !expectedLinePattern.MatchString(line) {
 		return
 	}
@@ -238,8 +243,11 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 	// trim the suffix
 	line = strings.TrimSuffix(line, "\r\n")
 
+	// Split the line by the additional delimiter $
+	lineParts := strings.SplitN(line, "$", 4)
+
 	// split on pipe (|), this gives a slice of numerical strings between "0" and "1023"
-	splitLine := strings.Split(line, "|")
+	splitLine := strings.Split(lineParts[0], "|")
 	numSliders := len(splitLine)
 
 	// update our slider count, if needed - this will send slider move events for all
