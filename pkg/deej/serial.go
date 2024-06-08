@@ -128,6 +128,9 @@ func (sio *SerialIO) Start() error {
 		}
 	}()
 
+	// Start data transfer to Arduino
+	sio.SendSystemData()
+
 	return nil
 }
 
