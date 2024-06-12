@@ -247,7 +247,7 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 	line = strings.TrimSuffix(line, "\r\n")
 
 	// Split the line by the additional delimiter $
-	lineParts := strings.SplitN(line, "$", 4)
+	lineParts := strings.SplitN(line, "$", 5)
 
 	// split on pipe (|), this gives a slice of numerical strings between "0" and "1023"
 	splitLine := strings.Split(lineParts[0], "|")
