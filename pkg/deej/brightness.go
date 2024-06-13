@@ -21,7 +21,7 @@ func NewBrightnessController() *BrightnessController {
 		automaticBrightness: false,
 		photoresistorLeft:   0,
 		photoresistorRight:  0,
-		currentBrightness:   80, // Default brightness (50%)
+		currentBrightness:   80, // Default brightness (80%)
 		prevEncoderValue:    0,  // Initialize previous encoder value to 0
 	}
 }
