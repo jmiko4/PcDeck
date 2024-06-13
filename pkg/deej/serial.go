@@ -212,23 +212,34 @@ func (sio *SerialIO) readLine(logger *zap.SugaredLogger, reader *bufio.Reader) c
 	ch := make(chan string)
 
 	go func() {
+		// Flag to skip the first read operation
+		skipFirstRead := true
+
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
-
 				if sio.deej.Verbose() {
 					logger.Warnw("Failed to read line from serial", "error", err, "line", line)
 				}
-
-				// just ignore the line, the read loop will stop after this
+				// Stop the goroutine if there's an error reading
+				close(ch)
 				return
+			}
+
+			if skipFirstRead {
+				// Skip the first read
+				skipFirstRead = false
+				if sio.deej.Verbose() {
+					logger.Debugw("Skipped initial read", "line", line)
+				}
+				continue
 			}
 
 			if sio.deej.Verbose() {
 				logger.Debugw("Read new line", "line", line)
 			}
 
-			// deliver the line to the channel
+			// Deliver the line to the channel
 			ch <- line
 		}
 	}()
