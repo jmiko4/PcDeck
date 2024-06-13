@@ -33,6 +33,8 @@ type SerialIO struct {
 	currentSliderPercentValues []float32
 
 	sliderMoveConsumers []chan SliderMoveEvent
+
+	brightnessController *BrightnessController
 }
 
 // SliderMoveEvent represents a single slider move captured by deej
@@ -53,12 +55,13 @@ func NewSerialIO(deej *Deej, logger *zap.SugaredLogger) (*SerialIO, error) {
 	logger = logger.Named("serial")
 
 	sio := &SerialIO{
-		deej:                deej,
-		logger:              logger,
-		stopChannel:         make(chan bool),
-		connected:           false,
-		conn:                nil,
-		sliderMoveConsumers: []chan SliderMoveEvent{},
+		deej:                 deej,
+		logger:               logger,
+		stopChannel:          make(chan bool),
+		connected:            false,
+		conn:                 nil,
+		sliderMoveConsumers:  []chan SliderMoveEvent{},
+		brightnessController: NewBrightnessController(),
 	}
 
 	logger.Debug("Created serial i/o instance")
@@ -314,5 +317,10 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 				consumer <- moveEvent
 			}
 		}
+	}
+
+	// If there are additional parts, handle brightness control
+	if len(lineParts) > 1 {
+		sio.brightnessController.HandleBrightnessInfo(lineParts[3])
 	}
 }
