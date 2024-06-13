@@ -2,8 +2,39 @@ package deej
 
 import (
 	"fmt"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
+)
+
+// Import the COM libraries (for Windows)
+var (
+	ole32              = syscall.NewLazyDLL("ole32.dll")
+	procCoInitializeEx = ole32.NewProc("CoInitializeEx")
+	procCoUninitialize = ole32.NewProc("CoUninitialize")
+)
+
+// CoInitializeEx initializes the COM library for use by the calling thread
+func CoInitializeEx(pvReserved uintptr, dwCoInit uint32) (err error) {
+	hr, _, _ := procCoInitializeEx.Call(
+		pvReserved,
+		uintptr(dwCoInit))
+	if hr != 0 {
+		err = fmt.Errorf("CoInitializeEx failed: hr = 0x%x", hr)
+	}
+	return
+}
+
+// CoUninitialize uninitializes the COM library
+func CoUninitialize() {
+	procCoUninitialize.Call()
+}
+
+const (
+	COINIT_APARTMENTTHREADED = 0x2 // Single-threaded apartment
+	COINIT_MULTITHREADED     = 0x0 // Multi-threaded apartment
 )
 
 // BrightnessController handles PC brightness control
@@ -21,7 +52,7 @@ func NewBrightnessController() *BrightnessController {
 		automaticBrightness: false,
 		photoresistorLeft:   0,
 		photoresistorRight:  0,
-		currentBrightness:   80, // Default brightness (80%)
+		currentBrightness:   90, // Default brightness (90%)
 		prevEncoderValue:    0,  // Initialize previous encoder value to 0
 	}
 }
@@ -65,7 +96,7 @@ func (bc *BrightnessController) adjustBrightness(encoderValue int) {
 	encoderChange := encoderValue - bc.prevEncoderValue
 
 	// Adjust brightness based on encoder change
-	bc.currentBrightness += encoderChange * 10
+	bc.currentBrightness += encoderChange * 5
 
 	// Ensure brightness is within 0% and 100%
 	if bc.currentBrightness < 0 {
@@ -76,6 +107,7 @@ func (bc *BrightnessController) adjustBrightness(encoderValue int) {
 
 	fmt.Printf("Manual brightness adjusted to %d%%\n", bc.currentBrightness)
 	// Implement logic to update brightness value in the system
+	bc.updateSystemBrightness()
 }
 
 func (bc *BrightnessController) toggleAutomaticBrightness() {
@@ -86,5 +118,37 @@ func (bc *BrightnessController) toggleAutomaticBrightness() {
 	} else {
 		fmt.Println("Automatic brightness control disabled")
 		// Implement logic to disable automatic brightness control
+	}
+}
+
+// updateSystemBrightness updates the brightness value in the system
+func (bc *BrightnessController) updateSystemBrightness() {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("brightnessctl", "set", fmt.Sprintf("%d%%", bc.currentBrightness))
+	case "windows":
+		// Initialize COM for this thread
+		err := CoInitializeEx(0, COINIT_APARTMENTTHREADED)
+		if err != nil {
+			fmt.Printf("Failed to initialize COM: %v\n", err)
+			return
+		}
+		defer CoUninitialize()
+
+		// Windows-specific command or script to adjust brightness
+		// For example, using PowerShell:
+		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,%d)", bc.currentBrightness))
+	case "darwin":
+		cmd = exec.Command("brightness", fmt.Sprintf("%.2f", float64(bc.currentBrightness)/100.0))
+	default:
+		fmt.Printf("Unsupported OS: %s\n", runtime.GOOS)
+		return
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Failed to update system brightness: %v\n", err)
 	}
 }
