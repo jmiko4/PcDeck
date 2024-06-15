@@ -6,35 +6,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
-)
-
-// Import the COM libraries (for Windows)
-var (
-	ole32              = syscall.NewLazyDLL("ole32.dll")
-	procCoInitializeEx = ole32.NewProc("CoInitializeEx")
-	procCoUninitialize = ole32.NewProc("CoUninitialize")
-)
-
-// CoInitializeEx initializes the COM library for use by the calling thread
-func CoInitializeEx(pvReserved uintptr, dwCoInit uint32) (err error) {
-	hr, _, _ := procCoInitializeEx.Call(
-		pvReserved,
-		uintptr(dwCoInit))
-	if hr != 0 {
-		err = fmt.Errorf("CoInitializeEx failed: hr = 0x%x", hr)
-	}
-	return
-}
-
-// CoUninitialize uninitializes the COM library
-func CoUninitialize() {
-	procCoUninitialize.Call()
-}
-
-const (
-	COINIT_APARTMENTTHREADED = 0x2 // Single-threaded apartment
-	COINIT_MULTITHREADED     = 0x0 // Multi-threaded apartment
 )
 
 // BrightnessController handles PC brightness control
@@ -44,6 +15,7 @@ type BrightnessController struct {
 	photoresistorRight  int
 	currentBrightness   int
 	prevEncoderValue    int // Previous absolute encoder value
+	lastButtonPress     int // Last button press state (0 or 1)
 }
 
 // NewBrightnessController initializes a new BrightnessController instance
@@ -54,6 +26,7 @@ func NewBrightnessController() *BrightnessController {
 		photoresistorRight:  0,
 		currentBrightness:   90, // Default brightness (90%)
 		prevEncoderValue:    0,  // Initialize previous encoder value to 0
+		lastButtonPress:     0,  // Initialize last button press state to 0 (assuming no button press)
 	}
 }
 
@@ -83,7 +56,13 @@ func (bc *BrightnessController) HandleBrightnessInfo(info string) {
 
 	// Toggle automatic brightness control based on button press
 	if buttonPress == 1 {
-		bc.toggleAutomaticBrightness()
+		// Only toggle if lastButtonPress was 0 (indicating no consecutive 1s)
+		if bc.lastButtonPress == 0 {
+			bc.toggleAutomaticBrightness()
+		}
+		bc.lastButtonPress = 1
+	} else {
+		bc.lastButtonPress = 0
 	}
 
 	// Update photoresistor values
@@ -129,14 +108,6 @@ func (bc *BrightnessController) updateSystemBrightness() {
 	case "linux":
 		cmd = exec.Command("brightnessctl", "set", fmt.Sprintf("%d%%", bc.currentBrightness))
 	case "windows":
-		// Initialize COM for this thread
-		err := CoInitializeEx(0, COINIT_APARTMENTTHREADED)
-		if err != nil {
-			fmt.Printf("Failed to initialize COM: %v\n", err)
-			return
-		}
-		defer CoUninitialize()
-
 		// Windows-specific command or script to adjust brightness
 		// For example, using PowerShell:
 		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,%d)", bc.currentBrightness))
