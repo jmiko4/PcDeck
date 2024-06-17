@@ -1,17 +1,11 @@
 const int NUM_SLIDERS = 3;
-const int NUM_MUTE_BUTTONS = 3;
 const int analogInputs[NUM_SLIDERS] = {A0, A1, A2};
-const int digitalInputs[NUM_MUTE_BUTTONS] = {26, 24, 22};
+
 int analogSliderValues[NUM_SLIDERS];
-int digitalButtonValues[NUM_MUTE_BUTTONS];
-String builtString;
 
 void setup() { 
   for (int i = 0; i < NUM_SLIDERS; i++) {
     pinMode(analogInputs[i], INPUT);
-  }
-  for (int i = 0; i < NUM_MUTE_BUTTONS; i++) {
-    pinMode(digitalInputs[i], INPUT_PULLUP);
   }
 
   Serial.begin(9600);
@@ -19,43 +13,40 @@ void setup() {
 
 void loop() {
   updateSliderValues();
-  updateMuteButtonValues();
-  sendValues(); // Send combined data
-  delay(1000);
+  sendSliderValues(); // Actually send data (all the time)
+  // printSliderValues(); // For debug
+  delay(10);
 }
 
 void updateSliderValues() {
   for (int i = 0; i < NUM_SLIDERS; i++) {
-    analogSliderValues[i] = analogRead(analogInputs[i]);
+     analogSliderValues[i] = analogRead(analogInputs[i]);
   }
 }
 
-void updateMuteButtonValues() {
-  for (int i = 0; i < NUM_MUTE_BUTTONS; i++) {
-    digitalButtonValues[i] = digitalRead(digitalInputs[i]);
-  }
-}
+void sendSliderValues() {
+  String builtString = String("");
 
-void sendValues() {
-  builtString = String("");
-
-  // Append slider values
   for (int i = 0; i < NUM_SLIDERS; i++) {
-    builtString += String(analogSliderValues[i]);
+    builtString += String((int)analogSliderValues[i]);
+
     if (i < NUM_SLIDERS - 1) {
-      builtString += "|";
+      builtString += String("|");
     }
   }
-
-  builtString += "$"; // Add delimiter between sliders and buttons
-
-  // Append button values
-  for (int i = 0; i < NUM_MUTE_BUTTONS; i++) {
-    builtString += String(digitalButtonValues[i]);
-    if (i < NUM_MUTE_BUTTONS - 1) {
-      builtString += "|";
-    }
-  }
-
+  
   Serial.println(builtString);
+}
+
+void printSliderValues() {
+  for (int i = 0; i < NUM_SLIDERS; i++) {
+    String printedString = String("Slider #") + String(i + 1) + String(": ") + String(analogSliderValues[i]) + String(" mV");
+    Serial.write(printedString.c_str());
+
+    if (i < NUM_SLIDERS - 1) {
+      Serial.write(" | ");
+    } else {
+      Serial.write("\n");
+    }
+  }
 }
