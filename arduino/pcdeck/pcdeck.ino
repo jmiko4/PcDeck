@@ -1,18 +1,21 @@
 const int NUM_SLIDERS = 3;
 const int NUM_MUTE_BUTTONS = 3;
 const int analogInputs[NUM_SLIDERS] = {A0, A1, A2};
-const int digitalInputs[NUM_MUTE_BUTTONS] = {26, 24, 22};
+const int digitalInputs[NUM_MUTE_BUTTONS] = {22, 24, 26}; // Updated button pins
+const int ledOutputs[NUM_MUTE_BUTTONS] = {23, 25, 27}; // LED pins
 int analogSliderValues[NUM_SLIDERS];
-int digitalButtonValues[NUM_MUTE_BUTTONS];
+int digitalButtonValues[NUM_MUTE_BUTTONS] = {HIGH, HIGH, HIGH}; // Initialize to HIGH because of INPUT_PULLUP
 bool muteStates[NUM_MUTE_BUTTONS] = {false, false, false}; // Track mute states
 String builtString;
 
-void setup() { 
+void setup() {
   for (int i = 0; i < NUM_SLIDERS; i++) {
     pinMode(analogInputs[i], INPUT);
   }
   for (int i = 0; i < NUM_MUTE_BUTTONS; i++) {
     pinMode(digitalInputs[i], INPUT_PULLUP);
+    pinMode(ledOutputs[i], OUTPUT);
+    digitalWrite(ledOutputs[i], LOW); // Turn off LEDs initially
   }
 
   Serial.begin(9600);
@@ -38,6 +41,7 @@ void updateMuteButtonValues() {
     int currentButtonValue = digitalRead(digitalInputs[i]);
     if (currentButtonValue == LOW && digitalButtonValues[i] == HIGH) { // Button pressed
       muteStates[i] = !muteStates[i]; // Toggle mute state
+      digitalWrite(ledOutputs[i], muteStates[i] ? HIGH : LOW); // Toggle LED
     }
     digitalButtonValues[i] = currentButtonValue;
   }
