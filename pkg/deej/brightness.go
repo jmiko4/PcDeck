@@ -13,7 +13,6 @@ type BrightnessController struct {
 	automaticBrightness bool
 	photoresistorLeft   int
 	photoresistorRight  int
-	currentBrightness   int
 	prevEncoderValue    int // Previous absolute encoder value
 	lastButtonPress     int // Last button press state (0 or 1)
 }
@@ -24,9 +23,8 @@ func NewBrightnessController() *BrightnessController {
 		automaticBrightness: false,
 		photoresistorLeft:   0,
 		photoresistorRight:  0,
-		currentBrightness:   90, // Default brightness (90%)
-		prevEncoderValue:    0,  // Initialize previous encoder value to 0
-		lastButtonPress:     0,  // Initialize last button press state to 0 (assuming no button press)
+		prevEncoderValue:    0, // Initialize previous encoder value to 0
+		lastButtonPress:     0, // Initialize last button press state to 0 (assuming no button press)
 	}
 }
 
@@ -74,19 +72,15 @@ func (bc *BrightnessController) adjustBrightness(encoderValue int) {
 	// Compute brightness adjustment based on encoder value change
 	encoderChange := encoderValue - bc.prevEncoderValue
 
-	// Adjust brightness based on encoder change
-	bc.currentBrightness += encoderChange * 5
-
-	// Ensure brightness is within 0% and 100%
-	if bc.currentBrightness < 0 {
-		bc.currentBrightness = 0
-	} else if bc.currentBrightness > 100 {
-		bc.currentBrightness = 100
+	if encoderChange > 0 {
+		for i := 0; i < encoderChange; i++ {
+			bc.sendKeyPress("Alt+PgUp")
+		}
+	} else {
+		for i := 0; i < -encoderChange; i++ {
+			bc.sendKeyPress("Alt+PgDown")
+		}
 	}
-
-	fmt.Printf("Manual brightness adjusted to %d%%\n", bc.currentBrightness)
-	// Implement logic to update brightness value in the system
-	bc.updateSystemBrightness()
 }
 
 func (bc *BrightnessController) toggleAutomaticBrightness() {
@@ -100,19 +94,26 @@ func (bc *BrightnessController) toggleAutomaticBrightness() {
 	}
 }
 
-// updateSystemBrightness updates the brightness value in the system
-func (bc *BrightnessController) updateSystemBrightness() {
+func (bc *BrightnessController) sendKeyPress(key string) {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "linux":
-		cmd = exec.Command("brightnessctl", "set", fmt.Sprintf("%d%%", bc.currentBrightness))
+		cmd = exec.Command("xdotool", "key", key)
 	case "windows":
-		// Windows-specific command or script to adjust brightness
-		// For example, using PowerShell:
-		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,%d)", bc.currentBrightness))
+		// Windows-specific command or script to send key press
+		if key == "Alt+PgUp" {
+			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('%{PGUP}')")
+		} else {
+			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('%{PGDN}')")
+		}
 	case "darwin":
-		cmd = exec.Command("brightness", fmt.Sprintf("%.2f", float64(bc.currentBrightness)/100.0))
+		// macOS-specific command or script to send key press
+		if key == "Alt+PgUp" {
+			cmd = exec.Command("osascript", "-e", "tell application \"System Events\" to key code 116 using {option down}") // Option+Page Up
+		} else {
+			cmd = exec.Command("osascript", "-e", "tell application \"System Events\" to key code 121 using {option down}") // Option+Page Down
+		}
 	default:
 		fmt.Printf("Unsupported OS: %s\n", runtime.GOOS)
 		return
@@ -120,6 +121,8 @@ func (bc *BrightnessController) updateSystemBrightness() {
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Printf("Failed to update system brightness: %v\n", err)
+		fmt.Printf("Failed to send key press: %v\n", err)
+	} else {
+		fmt.Printf("Generated key press: %s\n", key)
 	}
 }
