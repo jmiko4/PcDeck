@@ -6,25 +6,36 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // BrightnessController handles PC brightness control
 type BrightnessController struct {
-	automaticBrightness bool
-	photoresistorLeft   int
-	photoresistorRight  int
-	prevEncoderValue    int // Previous absolute encoder value
-	lastButtonPress     int // Last button press state (0 or 1)
+	automaticBrightness          int // Use 0 for disabled, 1 for enabled
+	photoresistorLeft            int
+	photoresistorRight           int
+	avgPhotoresistor             int           // Average of photoresistor values
+	prevAvgPhotoresistor         int           // Previous average of photoresistor values
+	prevEncoderValue             int           // Previous absolute encoder value
+	lastButtonPress              int           // Last button press state (0 or 1)
+	photoresistorChangeThreshold int           // Threshold for photoresistor change to trigger brightness adjustment
+	lastBrightnessChangeTime     time.Time     // Last time brightness was changed
+	brightnessChangeDelay        time.Duration // Delay between brightness changes
 }
 
 // NewBrightnessController initializes a new BrightnessController instance
 func NewBrightnessController() *BrightnessController {
 	return &BrightnessController{
-		automaticBrightness: false,
-		photoresistorLeft:   0,
-		photoresistorRight:  0,
-		prevEncoderValue:    0, // Initialize previous encoder value to 0
-		lastButtonPress:     0, // Initialize last button press state to 0 (assuming no button press)
+		automaticBrightness:          0, // Initialize to 0 (disabled)
+		photoresistorLeft:            0,
+		photoresistorRight:           0,
+		avgPhotoresistor:             0,
+		prevAvgPhotoresistor:         0,
+		prevEncoderValue:             0,               // Initialize previous encoder value to 0
+		lastButtonPress:              0,               // Initialize last button press state to 0 (assuming no button press)
+		photoresistorChangeThreshold: 50,              // Default threshold for photoresistor change
+		lastBrightnessChangeTime:     time.Now(),      // Initialize last change time
+		brightnessChangeDelay:        1 * time.Second, // 1 second delay between brightness changes
 	}
 }
 
@@ -43,6 +54,9 @@ func (bc *BrightnessController) HandleBrightnessInfo(info string) {
 	buttonPress, _ := strconv.Atoi(fields[1])
 	photoresistorLeft, _ := strconv.Atoi(fields[2])
 	photoresistorRight, _ := strconv.Atoi(fields[3])
+
+	// Calculate average photoresistor value
+	bc.avgPhotoresistor = (photoresistorLeft + photoresistorRight) / 2
 
 	// Check if encoder value changed
 	if encoderValue != bc.prevEncoderValue {
@@ -63,9 +77,9 @@ func (bc *BrightnessController) HandleBrightnessInfo(info string) {
 		bc.lastButtonPress = 0
 	}
 
-	// Update photoresistor values
-	bc.photoresistorLeft = photoresistorLeft
-	bc.photoresistorRight = photoresistorRight
+	if bc.automaticBrightness == 1 {
+		bc.adjustBrightnessAutomatically()
+	}
 }
 
 func (bc *BrightnessController) adjustBrightness(encoderValue int) {
@@ -77,20 +91,38 @@ func (bc *BrightnessController) adjustBrightness(encoderValue int) {
 			bc.sendKeyPress("Alt+PgUp")
 		}
 	} else {
-		for i := 0; i < -encoderChange; i++ {
+		for i := 0; i > encoderChange; i-- {
 			bc.sendKeyPress("Alt+PgDown")
 		}
 	}
 }
 
 func (bc *BrightnessController) toggleAutomaticBrightness() {
-	bc.automaticBrightness = !bc.automaticBrightness
-	if bc.automaticBrightness {
+	if bc.automaticBrightness == 0 {
+		bc.automaticBrightness = 1
 		fmt.Println("Automatic brightness control enabled")
-		// Implement logic to enable automatic brightness control
 	} else {
+		bc.automaticBrightness = 0
 		fmt.Println("Automatic brightness control disabled")
-		// Implement logic to disable automatic brightness control
+	}
+}
+
+func (bc *BrightnessController) adjustBrightnessAutomatically() {
+	// Compare current average with previous average and check if change exceeds threshold
+	if abs(bc.avgPhotoresistor-bc.prevAvgPhotoresistor) >= bc.photoresistorChangeThreshold {
+		// If the delay period has passed since the last adjustment, adjust brightness
+		if time.Since(bc.lastBrightnessChangeTime) >= bc.brightnessChangeDelay {
+			// If current average is greater than previous, increase brightness
+			if bc.avgPhotoresistor > bc.prevAvgPhotoresistor {
+				bc.sendKeyPress("Alt+PgUp")
+			} else { // Decrease brightness
+				bc.sendKeyPress("Alt+PgDown")
+			}
+
+			// Update previous average and last brightness change time
+			bc.prevAvgPhotoresistor = bc.avgPhotoresistor
+			bc.lastBrightnessChangeTime = time.Now()
+		}
 	}
 }
 
@@ -125,4 +157,12 @@ func (bc *BrightnessController) sendKeyPress(key string) {
 	} else {
 		fmt.Printf("Generated key press: %s\n", key)
 	}
+}
+
+// Helper function to get absolute value
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
