@@ -116,7 +116,7 @@ void sendValues() {
 
   builtString += String(encoder1Value)+"|"+String(!encoder1KeyState)+"|"+String(photoresistor1Value)+"|"+String(photoresistor2Value);
 
-  builtString += "$0|1|0|0|0|0"; // Add key states (not yet implemented).
+  builtString += "$0|0|0|0|0|0"; // Add key states (not yet implemented, send 0 for now).
 
 
   Serial.println(builtString);
