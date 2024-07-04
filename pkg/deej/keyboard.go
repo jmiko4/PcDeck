@@ -35,7 +35,7 @@ func (kc *KeyboardController) HandleKeyboardInfo(data string) error {
 
 	// Map of key index to the corresponding key combination for Windows
 	keyMap := map[int]string{
-		0: "Alt+Shift+A",
+		0: "Ctrl+Shift+Esc",
 		1: "B",
 		2: "F7",
 		3: "F8",
@@ -89,8 +89,8 @@ func (kc *KeyboardController) sendKeyPress(osType, keyCombination string) error 
 		switch keyCombination {
 		case "Alt+Left":
 			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('%{LEFT}')")
-		case "Alt+Shift+A":
-			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('%+A')")
+		case "Ctrl+Shift+Esc":
+			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('^+{ESC}')")
 		case "B":
 			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('B')")
 		case "F7":
