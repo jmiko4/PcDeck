@@ -40,15 +40,18 @@ void setup() {
     digitalWrite(ledOutputs[i], LOW); // Turn off LEDs initially
   }
 
+
   pinMode(E1_SW_PIN, INPUT_PULLUP);
   
   keyDebouncerE1.attach(E1_SW_PIN);
   keyDebouncerE1.interval(10);  // Debounce interval in milliseconds 
 
+
   Serial.begin(9600);
 }
 
 void loop() {
+
   keyDebouncerE1.update(); // Update the debouncer
   encoder1Value = encoder1.read() / 4;  // Read value and divide by 4 to get correct count
   encoder1KeyState = keyDebouncerE1.read();
@@ -63,6 +66,7 @@ void loop() {
     sendValues(); // Send combined data
   }
 
+
 }
 
 void updateSliderValues() {
@@ -70,6 +74,7 @@ void updateSliderValues() {
     if (!muteStates[i]) {
       analogSliderValues[i] = analogRead(analogInputs[i]);
     }
+
   }
 }
 
@@ -86,6 +91,7 @@ void updateMuteButtonValues() {
 
 void sendValues() {
   builtString = String("");
+
 
   // Append slider values or 0 if muted
   for (int i = 0; i < NUM_SLIDERS; i++) {
@@ -108,6 +114,7 @@ void sendValues() {
       builtString += "|";
     }
   }
+
 
   builtString += "$0|0$"; // Add encoder 2 values. Currently it is not used.
 
