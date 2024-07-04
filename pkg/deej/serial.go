@@ -33,6 +33,9 @@ type SerialIO struct {
 	currentSliderPercentValues []float32
 
 	sliderMoveConsumers []chan SliderMoveEvent
+
+	brightnessController *BrightnessController
+	keyboardController   *KeyboardController
 }
 
 // SliderMoveEvent represents a single slider move captured by deej
@@ -53,12 +56,14 @@ func NewSerialIO(deej *Deej, logger *zap.SugaredLogger) (*SerialIO, error) {
 	logger = logger.Named("serial")
 
 	sio := &SerialIO{
-		deej:                deej,
-		logger:              logger,
-		stopChannel:         make(chan bool),
-		connected:           false,
-		conn:                nil,
-		sliderMoveConsumers: []chan SliderMoveEvent{},
+		deej:                 deej,
+		logger:               logger,
+		stopChannel:          make(chan bool),
+		connected:            false,
+		conn:                 nil,
+		sliderMoveConsumers:  []chan SliderMoveEvent{},
+		brightnessController: NewBrightnessController(),
+		keyboardController:   NewKeyboardController(logger),
 	}
 
 	logger.Debug("Created serial i/o instance")
@@ -209,23 +214,34 @@ func (sio *SerialIO) readLine(logger *zap.SugaredLogger, reader *bufio.Reader) c
 	ch := make(chan string)
 
 	go func() {
+		// Flag to skip the first read operation
+		skipFirstRead := true
+
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
-
 				if sio.deej.Verbose() {
 					logger.Warnw("Failed to read line from serial", "error", err, "line", line)
 				}
-
-				// just ignore the line, the read loop will stop after this
+				// Stop the goroutine if there's an error reading
+				close(ch)
 				return
+			}
+
+			if skipFirstRead {
+				// Skip the first read
+				skipFirstRead = false
+				if sio.deej.Verbose() {
+					logger.Debugw("Skipped initial read", "line", line)
+				}
+				continue
 			}
 
 			if sio.deej.Verbose() {
 				logger.Debugw("Read new line", "line", line)
 			}
 
-			// deliver the line to the channel
+			// Deliver the line to the channel
 			ch <- line
 		}
 	}()
@@ -314,5 +330,15 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 				consumer <- moveEvent
 			}
 		}
+	}
+
+	// If there are additional parts, handle brightness control
+	if len(lineParts) > 3 {
+		sio.brightnessController.HandleBrightnessInfo(lineParts[3])
+	}
+
+	// If there are additional parts, handle brightness control
+	if len(lineParts) > 4 {
+		sio.keyboardController.HandleKeyboardInfo(lineParts[4])
 	}
 }

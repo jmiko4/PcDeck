@@ -1,3 +1,25 @@
+#include <Encoder.h>
+#include <Bounce2.h>
+
+unsigned long previousMillis = 0;  // Stores the last time the loop ran
+const long interval = 10;          // Interval for the non-blocking delay in milliseconds
+
+const int E1_CLK_PIN = 2;  // CLK (S1) (Clock) pin (encoder 1)
+const int E1_DT_PIN = 3;   // DT (S2) (Data) pin (encoder 1)
+const int E1_SW_PIN = 4;   // SW (Switch) pin (encoder 1)
+
+const int PHOTORESISTOR_PIN1 = A3; // Photoresistor 1 pin
+const int PHOTORESISTOR_PIN2 = A4; // Photoresistor 2 pin
+const int CHANGE_THRESHOLD = 50;   // Threshold for detecting significant changes in light
+
+Encoder encoder1(E1_DT_PIN, E1_CLK_PIN); // Create encoder 1 object
+Bounce keyDebouncerE1 = Bounce(); // Create Bounce object for the switch
+
+long encoder1Value = 0;
+bool encoder1KeyState = HIGH;  // Default to HIGH (not pressed)
+int photoresistor1Value = 0;
+int photoresistor2Value = 0;
+
 const int NUM_SLIDERS = 3;
 const int NUM_MUTE_BUTTONS = 3;
 const int analogInputs[NUM_SLIDERS] = {A0, A1, A2};
@@ -18,14 +40,33 @@ void setup() {
     digitalWrite(ledOutputs[i], LOW); // Turn off LEDs initially
   }
 
+
+  pinMode(E1_SW_PIN, INPUT_PULLUP);
+  
+  keyDebouncerE1.attach(E1_SW_PIN);
+  keyDebouncerE1.interval(10);  // Debounce interval in milliseconds 
+
+
   Serial.begin(9600);
 }
 
 void loop() {
-  updateSliderValues();
-  updateMuteButtonValues();
-  sendValues(); // Send combined data
-  delay(10);
+
+  keyDebouncerE1.update(); // Update the debouncer
+  encoder1Value = encoder1.read() / 4;  // Read value and divide by 4 to get correct count
+  encoder1KeyState = keyDebouncerE1.read();
+
+  unsigned long currentMillis = millis();  // Get the current time
+  // Check if the interval has passed
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;  // Save the current time
+    
+    updateSliderValues();
+    updateMuteButtonValues();
+    sendValues(); // Send combined data
+  }
+
+
 }
 
 void updateSliderValues() {
@@ -33,6 +74,7 @@ void updateSliderValues() {
     if (!muteStates[i]) {
       analogSliderValues[i] = analogRead(analogInputs[i]);
     }
+
   }
 }
 
@@ -49,6 +91,7 @@ void updateMuteButtonValues() {
 
 void sendValues() {
   builtString = String("");
+
 
   // Append slider values or 0 if muted
   for (int i = 0; i < NUM_SLIDERS; i++) {
@@ -71,6 +114,17 @@ void sendValues() {
       builtString += "|";
     }
   }
+
+
+  builtString += "$0|0$"; // Add encoder 2 values. Currently it is not used.
+
+  photoresistor1Value = analogRead(PHOTORESISTOR_PIN1);
+  photoresistor2Value = analogRead(PHOTORESISTOR_PIN2);
+
+  builtString += String(encoder1Value)+"|"+String(!encoder1KeyState)+"|"+String(photoresistor1Value)+"|"+String(photoresistor2Value);
+
+  builtString += "$0|0|0|0|0|0"; // Add key states (not yet implemented, send 0 for now).
+
 
   Serial.println(builtString);
 }
