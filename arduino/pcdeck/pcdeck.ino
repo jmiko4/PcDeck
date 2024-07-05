@@ -28,6 +28,11 @@ const int ledOutputs[NUM_MUTE_BUTTONS] = {23, 25, 27}; // LED pins
 int analogSliderValues[NUM_SLIDERS];
 int digitalButtonValues[NUM_MUTE_BUTTONS] = {HIGH, HIGH, HIGH}; // Initialize to HIGH because of INPUT_PULLUP
 bool muteStates[NUM_MUTE_BUTTONS] = {false, false, false}; // Track mute states
+
+const int NUM_KEYS = 6;
+const int keyPins[NUM_KEYS] = {14, 15, 16, 17, 18, 19}; // Key button pins
+int keyValues[NUM_KEYS] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH}; // Initialize to HIGH because of INPUT_PULLUP
+
 String builtString;
 
 void setup() {
@@ -40,18 +45,19 @@ void setup() {
     digitalWrite(ledOutputs[i], LOW); // Turn off LEDs initially
   }
 
+  for (int i = 0; i < NUM_KEYS; i++) {
+    pinMode(keyPins[i], INPUT_PULLUP);
+  }
 
   pinMode(E1_SW_PIN, INPUT_PULLUP);
   
   keyDebouncerE1.attach(E1_SW_PIN);
   keyDebouncerE1.interval(10);  // Debounce interval in milliseconds 
 
-
   Serial.begin(9600);
 }
 
 void loop() {
-
   keyDebouncerE1.update(); // Update the debouncer
   encoder1Value = encoder1.read() / 4;  // Read value and divide by 4 to get correct count
   encoder1KeyState = keyDebouncerE1.read();
@@ -63,10 +69,9 @@ void loop() {
     
     updateSliderValues();
     updateMuteButtonValues();
+    updateKeyValues();
     sendValues(); // Send combined data
   }
-
-
 }
 
 void updateSliderValues() {
@@ -74,7 +79,6 @@ void updateSliderValues() {
     if (!muteStates[i]) {
       analogSliderValues[i] = analogRead(analogInputs[i]);
     }
-
   }
 }
 
@@ -89,9 +93,14 @@ void updateMuteButtonValues() {
   }
 }
 
-void sendValues() {
-  builtString = String("");
+void updateKeyValues() {
+  for (int i = 0; i < NUM_KEYS; i++) {
+    keyValues[i] = digitalRead(keyPins[i]);
+  }
+}
 
+void sendValues() {
+  builtString = "";
 
   // Append slider values or 0 if muted
   for (int i = 0; i < NUM_SLIDERS; i++) {
@@ -115,16 +124,22 @@ void sendValues() {
     }
   }
 
-
   builtString += "$0|0$"; // Add encoder 2 values. Currently it is not used.
 
   photoresistor1Value = analogRead(PHOTORESISTOR_PIN1);
   photoresistor2Value = analogRead(PHOTORESISTOR_PIN2);
 
-  builtString += String(encoder1Value)+"|"+String(!encoder1KeyState)+"|"+String(photoresistor1Value)+"|"+String(photoresistor2Value);
+  builtString += String(encoder1Value) + "|" + String(!encoder1KeyState) + "|" + String(photoresistor1Value) + "|" + String(photoresistor2Value);
 
-  builtString += "$0|0|0|0|0|0"; // Add key states (not yet implemented, send 0 for now).
+  builtString += "$"; // Add delimiter before key states
 
+  // Append key states
+  for (int i = 0; i < NUM_KEYS; i++) {
+    builtString += String(keyValues[i] == LOW ? 1 : 0); // Convert HIGH/LOW to 1/0
+    if (i < NUM_KEYS - 1) {
+      builtString += "|";
+    }
+  }
 
   Serial.println(builtString);
 }
