@@ -36,8 +36,8 @@ func (kc *KeyboardController) HandleKeyboardInfo(data string) error {
 	// Map of key index to the corresponding key combination for Windows
 	keyMap := map[int]string{
 		0: "Ctrl+Shift+Esc",
-		1: "B",
-		2: "F7",
+		1: "discord",
+		2: "Chatgpt",
 		3: "F8",
 		4: "Alt+Left",
 		5: "F10",
@@ -91,10 +91,10 @@ func (kc *KeyboardController) sendKeyPress(osType, keyCombination string) error 
 			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('%{LEFT}')")
 		case "Ctrl+Shift+Esc":
 			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('^+{ESC}')")
-		case "B":
-			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('B')")
-		case "F7":
-			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('{F7}')")
+		case "discord": 
+            cmd = exec.Command("powershell", "-Command", `Start-Process "C:\Users\Gaming\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Discord Inc\Discord.lnk"`)
+		case "Chatgpt":
+			cmd = exec.Command("powershell", "-Command", `Start-Process "https://www.chatgpt.com"`)
 		case "F8":
 			cmd = exec.Command("powershell", "-Command", "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('{F8}')")
 		case "F10":
