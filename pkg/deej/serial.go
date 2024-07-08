@@ -33,6 +33,9 @@ type SerialIO struct {
 	currentSliderPercentValues []float32
 
 	sliderMoveConsumers []chan SliderMoveEvent
+
+	brightnessController *BrightnessController
+	keyboardController   *KeyboardController
 }
 
 // SliderMoveEvent represents a single slider move captured by deej
@@ -41,7 +44,11 @@ type SliderMoveEvent struct {
 	PercentValue float32
 }
 
-var expectedLinePattern = regexp.MustCompile(`^\d{1,4}(\|\d{1,4})*\r\n$`)
+// Stores additional information received from Arduino
+var lineParts []string
+
+// It accepts the slider data and additional data after $
+var expectedLinePattern = regexp.MustCompile(`^\d{1,4}(\|\d{1,4})*(\$.*)*\r\n$`)
 
 // NewSerialIO creates a SerialIO instance that uses the provided deej
 // instance's connection info to establish communications with the arduino chip
@@ -49,12 +56,14 @@ func NewSerialIO(deej *Deej, logger *zap.SugaredLogger) (*SerialIO, error) {
 	logger = logger.Named("serial")
 
 	sio := &SerialIO{
-		deej:                deej,
-		logger:              logger,
-		stopChannel:         make(chan bool),
-		connected:           false,
-		conn:                nil,
-		sliderMoveConsumers: []chan SliderMoveEvent{},
+		deej:                 deej,
+		logger:               logger,
+		stopChannel:          make(chan bool),
+		connected:            false,
+		conn:                 nil,
+		sliderMoveConsumers:  []chan SliderMoveEvent{},
+		brightnessController: NewBrightnessController(),
+		keyboardController:   NewKeyboardController(logger),
 	}
 
 	logger.Debug("Created serial i/o instance")
@@ -123,6 +132,9 @@ func (sio *SerialIO) Start() error {
 			}
 		}
 	}()
+
+	// Start data transfer to Arduino
+	sio.SendSystemData()
 
 	return nil
 }
@@ -202,23 +214,34 @@ func (sio *SerialIO) readLine(logger *zap.SugaredLogger, reader *bufio.Reader) c
 	ch := make(chan string)
 
 	go func() {
+		// Flag to skip the first read operation
+		skipFirstRead := true
+
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
-
 				if sio.deej.Verbose() {
 					logger.Warnw("Failed to read line from serial", "error", err, "line", line)
 				}
-
-				// just ignore the line, the read loop will stop after this
+				// Stop the goroutine if there's an error reading
+				close(ch)
 				return
+			}
+
+			if skipFirstRead {
+				// Skip the first read
+				skipFirstRead = false
+				if sio.deej.Verbose() {
+					logger.Debugw("Skipped initial read", "line", line)
+				}
+				continue
 			}
 
 			if sio.deej.Verbose() {
 				logger.Debugw("Read new line", "line", line)
 			}
 
-			// deliver the line to the channel
+			// Deliver the line to the channel
 			ch <- line
 		}
 	}()
@@ -231,6 +254,7 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 	// this function receives an unsanitized line which is guaranteed to end with LF,
 	// but most lines will end with CRLF. it may also have garbage instead of
 	// deej-formatted values, so we must check for that! just ignore bad ones
+
 	if !expectedLinePattern.MatchString(line) {
 		return
 	}
@@ -238,8 +262,11 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 	// trim the suffix
 	line = strings.TrimSuffix(line, "\r\n")
 
+	// Split the line by the additional delimiter $
+	lineParts := strings.SplitN(line, "$", 5)
+
 	// split on pipe (|), this gives a slice of numerical strings between "0" and "1023"
-	splitLine := strings.Split(line, "|")
+	splitLine := strings.Split(lineParts[0], "|")
 	numSliders := len(splitLine)
 
 	// update our slider count, if needed - this will send slider move events for all
@@ -303,5 +330,15 @@ func (sio *SerialIO) handleLine(logger *zap.SugaredLogger, line string) {
 				consumer <- moveEvent
 			}
 		}
+	}
+
+	// If there are additional parts, handle brightness control
+	if len(lineParts) > 3 {
+		sio.brightnessController.HandleBrightnessInfo(lineParts[3])
+	}
+
+	// If there are additional parts, handle brightness control
+	if len(lineParts) > 4 {
+		sio.keyboardController.HandleKeyboardInfo(lineParts[4])
 	}
 }
