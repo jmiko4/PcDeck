@@ -1,5 +1,5 @@
 # PcDeck
-### Justin Mikolajcik, Elizabeth Hunter, Vladislovas Karalius, Matheus Pires
+### Justin Mikolajcik, Elizabeth Hunter, Vladislovas Karalius
 
 ## Setup and Usage
 
